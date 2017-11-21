@@ -4,6 +4,11 @@
 
 #include <stdint.h>
 
+const uint16_t SERCOM_TIMEOUT = 1000;
+
+const uint8_t PROTOCOL_START = '#';
+const uint8_t PROTOCOL_END = 0xFF;
+
 // COMMANDS: 5 bits (32)
 const uint8_t CMD_MASK = 0x1F;
 const uint8_t CMD_TICK = 0;
@@ -37,5 +42,15 @@ const uint8_t VARTYPE_SDWORD = VARTYPE_SIGNED   | VARTYPE_DWORD;
 const uint8_t VARTYPE_FLOAT  = VARTYPE_SIGNED;
 const uint8_t VARTYPE_SIZES[] = { 4, 1, 2, 4 };
 
+enum SERIAL_STATE
+{
+    SERSTATE_IDLE,
+    SERSTATE_START,
+    SERSTATE_INDEX,
+    SERSTATE_DATA,
+    SERSTATE_END,
+};
+
+void ParseSerial(unsigned long curtime);
 
 #endif /* TFFU_SERCOMM_H_ */

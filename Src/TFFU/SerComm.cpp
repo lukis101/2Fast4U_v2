@@ -13,24 +13,17 @@
 
 #include "TFFU/SerComm.h"
 #include "TFFU/Params.h"
+#include "TFFU/HW/UART.h"
+#include "TFFU/TFFUMain.h"
 #include <stdint.h>
+#include <string.h>
 
-static const uint8_t PROTOCOL_START = '#';
-static const uint8_t PROTOCOL_END = 0xFF;
 
-static const uint8_t SERBUFF_TICK[3] = { PROTOCOL_START, CMD_TICK, PROTOCOL_END };
-static const uint8_t SERBUFF_VARCOUNT[4] = { PROTOCOL_START, (VARTYPE_UBYTE<<5)|CMD_PARAM_LIST, PARAMCOUNT, PROTOCOL_END };
-static uint8_t SERBUFF_STRING[3] = { PROTOCOL_START, CMD_PRINT_STRING, 0 };
-static uint8_t SERBUFF_VAR[8] = { PROTOCOL_START, 0 };
+static const uint8_t MSGBUFF_TICK[3] = { PROTOCOL_START, CMD_TICK, PROTOCOL_END };
+static const uint8_t MSGBUFF_VARCOUNT[4] = { PROTOCOL_START, (VARTYPE_UBYTE<<5)|CMD_PARAM_LIST, PARAMCOUNT, PROTOCOL_END };
+static uint8_t MSGBUFF_STRING[3] = { PROTOCOL_START, CMD_PRINT_STRING, 0 };
+static uint8_t MSGBUFF_VAR[8] = { PROTOCOL_START, 0 };
 
-enum SERIAL_STATE
-{
-    SERSTATE_IDLE,
-    SERSTATE_START,
-    SERSTATE_INDEX,
-    SERSTATE_DATA,
-    SERSTATE_END,
-};
 unsigned long ser_lastUpdate = 0; // for timeout
 uint8_t ser_state = SERSTATE_IDLE;
 uint8_t ser_vartype = 0;
@@ -41,33 +34,33 @@ uint8_t ser_buff_i = 0;
 
 inline void SendAck()
 {
-    Serial.write( SERBUFF_TICK, 3 );
+    UART_Send((uint8_t*)MSGBUFF_TICK, 3);
 }
-void SendVar( uint8_t index, uint8_t vartype, void* ptr, uint8_t command )
+void SendVar(uint8_t index, uint8_t vartype, void* ptr, uint8_t command)
 {
     uint8_t varsize = VARTYPE_SIZES[ vartype & ~VARTYPE_SIGNED ];
-    SERBUFF_VAR[ 1 ] = (vartype<<5) | command;
-    SERBUFF_VAR[ 2 ] = index;
-    memcpy( (void*)(&SERBUFF_VAR[3]), ptr, varsize );
-    SERBUFF_VAR[ 3+varsize ] = PROTOCOL_END;
-    Serial.write( SERBUFF_VAR, 4+varsize );
+    MSGBUFF_VAR[ 1 ] = (vartype<<5) | command;
+    MSGBUFF_VAR[ 2 ] = index;
+    memcpy( (void*)(&MSGBUFF_VAR[3]), ptr, varsize );
+    MSGBUFF_VAR[ 3+varsize ] = PROTOCOL_END;
+    UART_Send(MSGBUFF_VAR, 4+varsize);
 }
-void SendParam( uint8_t index )
+void SendParam(uint8_t paramID)
 {
-    SendVar( index, PARAMDATA[ index*2 ], PARAM_PTRS[ index ], CMD_PARAM_READ );
+    SendVar(paramID, PARAMDATA[paramID*2], PARAM_PTR(paramID), CMD_PARAM_READ );
 }
 inline void SendMonVar( uint8_t index, uint8_t vartype, void* ptr )
 {
-    SendVar( index, vartype, ptr, CMD_MONITOR_READ );
+    //SendVar( index, vartype, ptr, CMD_MONITOR_READ );
 }
 
 void PrintVar( uint8_t vartype, void* ptr, uint8_t command )
 {
     uint8_t varsize = VARTYPE_SIZES[ vartype & ~VARTYPE_SIGNED ];
-    SERBUFF_VAR[ 1 ] = (vartype<<5) | command;
-    memcpy( (void*)(&SERBUFF_VAR[2]), ptr, varsize );
-    SERBUFF_VAR[ 2+varsize ] = PROTOCOL_END;
-    Serial.write( SERBUFF_VAR, 3+varsize );
+    MSGBUFF_VAR[ 1 ] = (vartype<<5) | command;
+    memcpy((void*)(&MSGBUFF_VAR[2]), ptr, varsize);
+    MSGBUFF_VAR[ 2+varsize ] = PROTOCOL_END;
+    UART_Send(MSGBUFF_VAR, 3+varsize);
 }
 void PrintVarDec( uint8_t vartype, void* ptr )
 {
@@ -77,24 +70,24 @@ void PrintVarHex( uint8_t vartype, void* ptr )
 {
     PrintVar( vartype, ptr, CMD_PRINT_HEX );
 }
-void PrintString( const char* str, uint8_t len )
+void PrintString(const char* str, uint8_t len )
 {
     //if( len == 0 ) return;
-    SERBUFF_STRING[ 2 ] = len;
-    Serial.write( SERBUFF_STRING, 3 );
-    Serial.write( str, len );
-    Serial.write( PROTOCOL_END );
+    MSGBUFF_STRING[2] = len;
+    UART_Send(MSGBUFF_STRING, 3);
+    UART_Send((uint8_t*)str, len);
+    UART_Send((uint8_t*)&PROTOCOL_END, 1);
 }
 
-inline void ParseSerial( unsigned long curtime )
+void ParseSerial(unsigned long curtime)
 {
-    while( Serial.available() > 0 ) // Byte by byte input processing
+    if (UART_Available()) // Byte by byte input processing
     {
-        uint8_t inByte = Serial.read();
+        uint8_t inbyte = UART_Read();
 
         // Check for timeout
         if( ser_state != SERSTATE_IDLE )
-            if( curtime-ser_lastUpdate >= SERIAL_TIMEOUT )
+            if( curtime-ser_lastUpdate >= SERCOM_TIMEOUT )
                 ser_state = SERSTATE_IDLE;
         ser_lastUpdate = curtime;
 
@@ -102,15 +95,12 @@ inline void ParseSerial( unsigned long curtime )
         switch( ser_state )
         {
         case SERSTATE_IDLE: // Wait for start token
-        SERSTATE_IDLE:
-            if( inByte == 0x30 ) // STK_GET_SYNC - reset for programming
-                reset();
-            else if( inByte == PROTOCOL_START )
+            if( inbyte == PROTOCOL_START )
                 ser_state = SERSTATE_START;
             break;
 
         case SERSTATE_START: // Parse command
-            ser_command = inByte & CMD_MASK;
+            ser_command = inbyte & CMD_MASK;
             switch( ser_command )
             {
             // Commands without params
@@ -128,7 +118,7 @@ inline void ParseSerial( unsigned long curtime )
             // Commands with index byte
             case CMD_PARAM_READ:
             case CMD_PARAM_WRITE:
-                ser_vartype = (inByte >> 5) & VARTYPE_MASK;
+                ser_vartype = (inbyte >> 5) & VARTYPE_MASK;
                 ser_state = SERSTATE_INDEX;
                 break;
 
@@ -140,11 +130,11 @@ inline void ParseSerial( unsigned long curtime )
             break;
 
         case SERSTATE_INDEX: // Read variable index
-            ser_varid = inByte;
+            ser_varid = inbyte;
             if( ser_command == CMD_PARAM_WRITE )
             {
                 // Determine payload size
-                byte baseType = ser_vartype & ~(VARTYPE_SIGNED);
+                uint8_t baseType = ser_vartype & ~(VARTYPE_SIGNED);
                 if( baseType == VARTYPE_BYTE )
                     ser_buff_i = 0;
                 else if( baseType == VARTYPE_WORD )
@@ -159,7 +149,7 @@ inline void ParseSerial( unsigned long curtime )
             break;
 
         case SERSTATE_DATA: // Read payload data
-            ser_buff[ ser_buff_i ] = inByte;
+            ser_buff[ ser_buff_i ] = inbyte;
             if( ser_buff_i == 0 )
                 ser_state = SERSTATE_END;
             else
@@ -167,7 +157,7 @@ inline void ParseSerial( unsigned long curtime )
             break;
 
         case SERSTATE_END: // Packet complete, check end token to acknowledge packet
-            if( inByte == PROTOCOL_END )
+            if( inbyte == PROTOCOL_END )
             {
                 // Run the command
                 switch( ser_command )
@@ -177,7 +167,7 @@ inline void ParseSerial( unsigned long curtime )
                     break;
 
                 case CMD_CALIBRATE:
-                    Sensors_Calibrate();
+                    //Sensors_Calibrate();
                     SendAck(); // Acknowledge
                     break;
                 case CMD_RACE_START:
@@ -190,11 +180,11 @@ inline void ParseSerial( unsigned long curtime )
                     break;
 
                 case CMD_EEPROM_READ:
-                    EEPROM_ReadParams(); // EEPROM to RAM
+                    //EEPROM_ReadParams(); // EEPROM to RAM
                     SendAck(); // Acknowledge
                     break;
                 case CMD_EEPROM_WRITE:
-                    EEPROM_WriteParams(); // RAM to EEPROM
+                    //EEPROM_WriteParams(); // RAM to EEPROM
                     SendAck(); // Acknowledge
                     break;
 
@@ -203,13 +193,13 @@ inline void ParseSerial( unsigned long curtime )
                     break;
 
                 case CMD_PARAM_WRITE:
-                    memcpy( PARAM_PTRS[ ser_varid ], ser_buff, VARTYPE_SIZES[ PARAMDATA[ser_varid*2] & ~VARTYPE_SIGNED ] );
+                    memcpy( PARAM_PTR(ser_varid), ser_buff, VARTYPE_SIZES[ PARAM_TYPE(ser_varid) & ~VARTYPE_SIGNED ] );
                     //SendAck(); // Acknowledge
-                    if( ser_varid==PARAM_MANUAL_ENABLE || ser_varid==PARAM_MONITOR_ENABLE )
-                        Standby( !(param_monitor_enable || param_manual_enable) );
+                    //if( ser_varid==PARAM_MANUAL_ENABLE || ser_varid==PARAM_MONITOR_ENABLE )
+                    //    Standby( !(param_monitor_enable || param_manual_enable) );
                     break;
                 case CMD_PARAM_LIST:
-                    Serial.write( SERBUFF_VARCOUNT, 4 ); // Send param amount
+                	UART_Send((uint8_t*)MSGBUFF_VARCOUNT, 4); // Send param amount
                     for( uint8_t i=0; i<PARAMCOUNT; i++ )
                         SendParam( i );
                     break;
