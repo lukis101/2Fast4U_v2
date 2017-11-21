@@ -29,7 +29,7 @@ void UART_Send(uint8_t* pdata, uint8_t amount)
 	// Transmit
 	while (HAL_UART_Transmit_DMA(&huart1, (uint8_t*)pdata, amount) == HAL_BUSY);
 	// Checks and waits if previous tx is not finished
-	//while (!huart1_finished_tx);
+	while (!huart1_finished_tx);
 }
 
 bool UART_Available(void)

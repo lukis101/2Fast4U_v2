@@ -5,7 +5,7 @@
 #include <cstddef>
 #include "TFFU/SerComm.h"
 
-#define PARAM_PTR(ID) (&AllParams+PARAMDATA[ID*2+1])
+#define PARAM_PTR(ID) (((uint8_t*)&AllParams)+PARAMDATA[ID*2+1])
 #define PARAM_TYPE(ID) (PARAMDATA[ID*2])
 
 typedef enum {
@@ -43,6 +43,7 @@ extern AllParams_t AllParams;
 // Types of of variables and memory offsets
 const uint8_t PARAMDATA[ PARAMCOUNT*2 ] = {
 	VARTYPE_SWORD, offsetof(AllParams_t, MaxPWM),
+	VARTYPE_FLOAT, offsetof(AllParams_t, Accel),
 	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Angle.p),
 	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Angle.i),
 	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Angle.d),
@@ -72,6 +73,6 @@ const uint8_t MONVAR_RSPEED = 9;
 const uint8_t MONVARCOUNT = 10;
 
 
-void Params_SetDefaults();
+void Params_SetDefaults(void);
 
 #endif /* TFFU_PARAMS_H_ */

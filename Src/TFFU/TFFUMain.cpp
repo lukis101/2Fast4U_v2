@@ -58,10 +58,10 @@ void TFFUMain(void)
 	//HAL_GPIO_WritePin(Vmot_EN_GPIO_Port, Vmot_EN_Pin, (GPIO_PinState)(1));
 
     uint8_t writecmd[] = {0x80, 0x01};
-	while (HAL_I2C_IsDeviceReady(&hi2c1, (uint16_t)(0x34), 3, 100) != HAL_OK) {}
-	while (HAL_I2C_IsDeviceReady(&hi2c1, (uint16_t)(0x36), 3, 100) != HAL_OK) {}
-	HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)(0x34), writecmd, 2, 1000);
-	HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)(0x36), writecmd, 2, 1000);
+	//while (HAL_I2C_IsDeviceReady(&hi2c1, (uint16_t)(0x34), 3, 100) != HAL_OK) {}
+	//while (HAL_I2C_IsDeviceReady(&hi2c1, (uint16_t)(0x36), 3, 100) != HAL_OK) {}
+	//HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)(0x34), writecmd, 2, 1000);
+	//HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)(0x36), writecmd, 2, 1000);
 
 	/* Main loop */
 	while(1)
