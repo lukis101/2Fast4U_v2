@@ -1,6 +1,9 @@
 
 #ifndef TFFU_PARAMS_H_
 #define TFFU_PARAMS_H_
+#ifdef __cplusplus
+ extern "C" {
+#endif
 
 #include <cstddef>
 #include "TFFU/SerComm.h"
@@ -9,12 +12,12 @@
 #define PARAM_TYPE(ID) (PARAMDATA[ID*2])
 
 typedef enum {
-	RACEMODE_STOP,
-	RACEMODE_NEUTRAL,
+	RACEMODE_STOP = 0,
 	RACEMODE_MANUAL,
+	RACEMODE_STANDBY,
+	RACEMODE_SIMPLE,
 	RACEMODE_LEARN,
 	RACEMODE_RECALL,
-	RACEMODE_SIMPLE,
 }RaceMode_t;
 
 typedef struct {
@@ -59,20 +62,21 @@ const uint8_t PARAMDATA[ PARAMCOUNT*2 ] = {
 	VARTYPE_UBYTE, offsetof(AllParams_t, MonitoringInterval),
 };
 
-
-const uint8_t MONVAR_VOLTAGE = 0;
-const uint8_t MONVAR_OFFSET = 1;
-const uint8_t MONVAR_1 = 2;
-const uint8_t MONVAR_2 = 3;
-const uint8_t MONVAR_3 = 4;
-const uint8_t MONVAR_SENSORS = 5;
-const uint8_t MONVAR_DISTANCE = 6;
-const uint8_t MONVAR_EVENT = 7;
-const uint8_t MONVAR_LSPEED = 8;
-const uint8_t MONVAR_RSPEED = 9;
-const uint8_t MONVARCOUNT = 10;
+typedef enum {
+	MONVAR_VOLTAGE = 0,
+	MONVAR_OFFSET,
+	MONVAR_1,
+	MONVAR_2,
+	MONVAR_3,
+	MONVAR_SENSORS,
+	MONVAR_LSPEED,
+	MONVAR_RSPEED,
+}Monvars_t;
 
 
 void Params_SetDefaults(void);
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* TFFU_PARAMS_H_ */

@@ -1,6 +1,9 @@
 
 #ifndef TFFU_HW_UART_H_
 #define TFFU_HW_UART_H_
+#ifdef __cplusplus
+ extern "C" {
+#endif
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -16,4 +19,7 @@ bool UART_Available(void);
 uint8_t UART_Read(void);
 void UART_Send(uint8_t* pdata, uint8_t amount);
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* TFFU_HW_UART_H_ */

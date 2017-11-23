@@ -46,9 +46,9 @@ extern uint32_t nextTick_sensors;
 extern bool startFlag;
 extern bool stopFlag;
 
-extern bool sysTick;
 
 void TFFUMain(void);
+void TFFUSysTick(void);
 
 
 #ifdef __cplusplus

@@ -12,6 +12,9 @@
 #include "TFFU/HW/UART.h"
 #include "TFFU/SerComm.h"
 #include "TFFU/Params.h"
+#include "TFFU/Motor.h"
+#include "TFFU/Sensors.h"
+
 
 
 volatile uint32_t last;
@@ -42,7 +45,7 @@ uint32_t lastTick_motors;
 uint32_t lastTick_sensors;
 uint32_t nextTick_sensors;
 
-bool sysTick = false;
+bool sysTickflag = false;
 
 void TFFUMain(void)
 {
@@ -50,18 +53,16 @@ void TFFUMain(void)
 	//SWO_Setup();
 	UART_Init();
 	Params_SetDefaults();
-
-	//int hver = HAL_GetHalVersion();
-	HAL_TIM_Encoder_Start(&htim1, TIM_CHANNEL_1);
-	HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_1);
 	HAL_TIM_Base_Start(&htim3);
-	//HAL_GPIO_WritePin(Vmot_EN_GPIO_Port, Vmot_EN_Pin, (GPIO_PinState)(1));
 
-    uint8_t writecmd[] = {0x80, 0x01};
-	//while (HAL_I2C_IsDeviceReady(&hi2c1, (uint16_t)(0x34), 3, 100) != HAL_OK) {}
-	//while (HAL_I2C_IsDeviceReady(&hi2c1, (uint16_t)(0x36), 3, 100) != HAL_OK) {}
-	//HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)(0x34), writecmd, 2, 1000);
-	//HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)(0x36), writecmd, 2, 1000);
+	//HAL_GPIO_WritePin(Vmot_EN_GPIO_Port, Vmot_EN_Pin, (GPIO_PinState)(1));
+	Motor motorL(TIM1, TIM3, 0, MOT1_DIR_GPIO_Port, MOT1_DIR_Pin, &htim1, &htim3);
+	Motor motorR(TIM2, TIM3, 1, MOT2_DIR_GPIO_Port, MOT2_DIR_Pin, &htim2, &htim3);
+	motorL.setSpeed(0);
+	motorR.setSpeed(0);
+
+	Sensors sensors(4);
+	sensors.Start();
 
 	/* Main loop */
 	while(1)
@@ -69,44 +70,74 @@ void TFFUMain(void)
 		uint32_t systicks = HAL_GetTick();
 		ParseSerial(systicks);
 
-		/*if(param_manual_enable != 0)
+		if(AllParams.ManualThrottle > 50)
 			HAL_GPIO_WritePin(LED_L_GPIO_Port,LED_L_Pin, (GPIO_PinState)(1));
 		else
-			HAL_GPIO_WritePin(LED_L_GPIO_Port,LED_L_Pin, (GPIO_PinState)(0));*/
+			HAL_GPIO_WritePin(LED_L_GPIO_Port,LED_L_Pin, (GPIO_PinState)(0));
 
-		if (sysTick)
+		if (sysTickflag== true)
 		{
-			sysTick = false;
+			sysTickflag = false;
 			uint32_t millis = systicks % 1000;
 
-			if (millis == 0)
+			motorL.update();
+			motorR.update();
+			sensors.Update();
+
+
+			if (millis == 0) // heartbeat
 			{
 				//HAL_GPIO_WritePin(LED_L_GPIO_Port,LED_L_Pin, (GPIO_PinState)(1));
 				HAL_GPIO_WritePin(LED_R_GPIO_Port,LED_R_Pin, (GPIO_PinState)(1));
-				//HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
+				//SendMonVar(MONVAR_VOLTAGE, VARTYPE_UDWORD, &systicks);
 			}
-			else if (millis == 100)
+			else if (millis == 100) // heartbeat
 			{
 				//HAL_GPIO_WritePin(LED_L_GPIO_Port,LED_L_Pin, (GPIO_PinState)(0));
 				HAL_GPIO_WritePin(LED_R_GPIO_Port,LED_R_Pin, (GPIO_PinState)(0));
-				HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
+				//HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
 			}
-			if (millis % 50 == 0)
+			//if (systicks % 10 == 0) // motors
+			{
+				float speed_l, speed_r;
+				float drivethrottle = AllParams.ManualThrottle/255.0*MOT_PWM_MAX;
+				float driveangle = -sensors.curOffset;//AllParams.ManualAngle/128.f;
+			    if( driveangle <= 0.f ) // Left
+			    {
+			        speed_l = driveangle;
+			        speed_r = -driveangle;
+			    }
+			    else // Right
+			    {
+			        speed_l = driveangle;
+			        speed_r = -driveangle;
+			    }
+			    float steerspd = AllParams.MaxPWM;
+			    speed_l = -driveangle*steerspd;
+			    speed_r = driveangle*steerspd;
+
+				motorL.setSpeed((int32_t)(speed_l+drivethrottle));
+				motorR.setSpeed((int32_t)(speed_r+drivethrottle));
+			}
+			if (systicks % 200 == 0)
 			{
 				HAL_GPIO_WritePin(LED_F_GPIO_Port,LED_F_Pin, (GPIO_PinState)(1));
 				//while (HAL_I2C_IsDeviceReady(&hi2c1, (uint16_t)(0x34), 3, 100) != HAL_OK) {}
 				//while (HAL_I2C_IsDeviceReady(&hi2c1, (uint16_t)(0x36), 3, 100) != HAL_OK) {}
 
-				int outstrlen = 0;
+				SendMonVar(MONVAR_2, VARTYPE_SDWORD, &motorL.realSpeed);
+				SendMonVar(MONVAR_3, VARTYPE_SDWORD, &motorR.realSpeed);
+				//SendMonVar(MONVAR_1, VARTYPE_FLOAT, &sensors.curOffset);
+				//SendMonVar(MONVAR_SENSORS, VARTYPE_UWORD, &sensors.thresholds);
 
-				char formatenc[] = "%05d %05d";
-				uint16_t tim1val = TIM1->CNT;
-				uint16_t tim2val = TIM2->CNT;
+				//int outstrlen = 0;
+
+				//char formatenc[] = "%05d %05d";
 				//outstrlen += sprintf(aTxBuffer+outstrlen, formatenc, tim1val, tim2val);
 
-				/*uint8_t vals[14*2];
+				//uint8_t vals[14*2];
 
-				uint8_t targetvalue = 1;
+				/*uint8_t targetvalue = 1;
 				HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)(0x34), &targetvalue, 1, 100);
 				HAL_I2C_Master_Receive(&hi2c1, (uint16_t)(0x34), vals, 7*2, 100);
 				HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)(0x36), &targetvalue, 1, 100);
@@ -114,17 +145,22 @@ void TFFUMain(void)
 				char format16[] = "%04d ";
 				for(int i=0; i<14; i++)
 					outstrlen += sprintf(aTxBuffer+outstrlen, format16, ((uint16_t*)vals)[i]);
-				aTxBuffer[outstrlen++] = '\n';*/
-				//UART_Send(aTxBuffer, outstrlen);
+				aTxBuffer[outstrlen++] = '\n';
+				UART_Send((uint8_t*)aTxBuffer, outstrlen);*/
 
 				//HAL_Delay(1);
 				HAL_GPIO_WritePin(LED_F_GPIO_Port,LED_F_Pin, (GPIO_PinState)(0));
 			}
 
 			/// MONITORING / DEBUG
-			/*if( AllParams.MonitoringInterval > 0 )
+			if( AllParams.MonitoringInterval > 0 )
 			{
-			}*/
+			}
 		}
 	}
+}
+
+void TFFUSysTick(void)
+{
+	sysTickflag = true;
 }

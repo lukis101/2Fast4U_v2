@@ -10,14 +10,14 @@ AllParams_t AllParams;
 void Params_SetDefaults()
 {
 	AllParams.MaxPWM = 50;
-	AllParams.Accel = 12.5;
-	AllParams.PID_Angle  = {1.0, 2.0, 3.0};
-	AllParams.PID_Motors.p = 4.4;
-	AllParams.PID_Motors.i = 5.5;
-	AllParams.PID_Motors.d = 6.6;
-	AllParams.ManualThrottle = 7;
-	AllParams.ManualAngle = 8;
-	AllParams.DriveMode = 9;
+	AllParams.Accel = 1;
+	AllParams.PID_Angle  = {1.0, 1.0, 1.0};
+	AllParams.PID_Motors.p = 1;
+	AllParams.PID_Motors.i = 1;
+	AllParams.PID_Motors.d = 1;
+	AllParams.ManualThrottle = 0;
+	AllParams.ManualAngle = 0;
+	AllParams.DriveMode = 0;
 }
 
 // PARAMS

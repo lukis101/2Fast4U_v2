@@ -49,9 +49,9 @@ void SendParam(uint8_t paramID)
 {
     SendVar(paramID, PARAMDATA[paramID*2], PARAM_PTR(paramID), CMD_PARAM_READ );
 }
-inline void SendMonVar( uint8_t index, uint8_t vartype, void* ptr )
+void SendMonVar( uint8_t ID, uint8_t vartype, void* ptr )
 {
-    //SendVar( index, vartype, ptr, CMD_MONITOR_READ );
+    SendVar( ID, vartype, ptr, CMD_MONITOR_READ );
 }
 
 void PrintVar( uint8_t vartype, void* ptr, uint8_t command )

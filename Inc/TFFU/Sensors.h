@@ -1,14 +1,17 @@
-/*
- * Sensors.h
- *
- *  Created on: 2017-11-20
- *      Author: lukis
- */
 
 #ifndef TFFU_SENSORS_H_
 #define TFFU_SENSORS_H_
+#ifdef __cplusplus
+ extern "C" {
+#endif
 
 #include <stdint.h>
+
+#define SENSORS_ADDR1 0x34
+#define SENSORS_ADDR2 0x36
+
+#define SENSORS_THRESHOLD 400
+#define SENSORS_MAXVALUE  0x3FF
 
 class Sensors
 {
@@ -27,17 +30,22 @@ public:
 	int16_t sens_curNum  = 0;
 	int16_t sens_lastNum  = 0;
 
-public:
-	Sensors();
+	uint16_t thresholds; // Latest single reading
+	float lastOffset;
+	float curOffset;
 
-	void Init(void);
+public:
+	Sensors(int dummy);
+	//void Init(void);
 	void Update(void);
 	void BlockingUpdate(void);
 	void UpdateOffset(void);
-	void StartRead(void);
-	void Enable(void);
-	void Disable(void);
+	void Start(void);
+	void Stop(void);
 	void Calibrate(void);
 };
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* TFFU_SENSORS_H_ */

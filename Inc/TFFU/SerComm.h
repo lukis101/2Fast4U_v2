@@ -1,6 +1,9 @@
 
 #ifndef TFFU_SERCOMM_H_
 #define TFFU_SERCOMM_H_
+#ifdef __cplusplus
+ extern "C" {
+#endif
 
 #include <stdint.h>
 
@@ -52,5 +55,13 @@ enum SERIAL_STATE
 };
 
 void ParseSerial(unsigned long curtime);
+void SendMonVar( uint8_t ID, uint8_t vartype, void* ptr );
+void PrintVar( uint8_t vartype, void* ptr, uint8_t command );
+void PrintVarDec( uint8_t vartype, void* ptr );
+void PrintVarHex( uint8_t vartype, void* ptr );
+void PrintString(const char* str, uint8_t len );
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* TFFU_SERCOMM_H_ */
