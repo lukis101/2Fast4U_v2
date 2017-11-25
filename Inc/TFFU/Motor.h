@@ -5,7 +5,7 @@
  extern "C" {
 #endif
 
-#define MOT_PWM_MAX 100
+#define MOT_PWM_MAX 0xFF
 
 #include <stdint.h>
 #include "stm32f3xx_hal.h"
@@ -19,19 +19,19 @@ private:
 	GPIO_TypeDef* dirPin_port;
 	int dirPin_mask;
 	int pwmChan;
-	//TIM_HandleTypeDef* encHTim;
-	//TIM_HandleTypeDef* pwmHTim;
+	//TIM_HandleTypeDef* encHTim, pwmHTim;
 public:
 	int32_t encPos;
 	int32_t realSpeed;
 	int32_t targetSpeed;
 public:
 	Motor(TIM_TypeDef* encTimer, TIM_TypeDef* pwmTimer, int pwmChannel,
-			GPIO_TypeDef* dirPort, int dirPin,
-			TIM_HandleTypeDef* encHTimer, TIM_HandleTypeDef* pwmHTimer);
-	void update(void);
-	void setSpeed(int32_t newspeed);
-	void resetPos(void);
+			GPIO_TypeDef* dirPort, int dirPin);
+	void Enable(TIM_HandleTypeDef* encHTimer, TIM_HandleTypeDef* pwmHTimer);
+	void Disable(TIM_HandleTypeDef* encHTimer, TIM_HandleTypeDef* pwmHTimer);
+	void Update(void);
+	void SetSpeed(int32_t newspeed);
+	void ResetPos(void);
 };
 
 #ifdef __cplusplus

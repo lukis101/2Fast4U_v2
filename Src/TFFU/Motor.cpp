@@ -3,8 +3,7 @@
 #include "TFFU/TFFUMain.h"
 
 Motor::Motor(TIM_TypeDef* encTimer, TIM_TypeDef* pwmTimer, int pwmChannel,
-		GPIO_TypeDef* dirPort, int dirPin,
-		TIM_HandleTypeDef* encHTimer, TIM_HandleTypeDef* pwmHTimer)
+		GPIO_TypeDef* dirPort, int dirPin)
 {
 	encPos = 0;
 	lastEncVal = 0;
@@ -15,11 +14,19 @@ Motor::Motor(TIM_TypeDef* encTimer, TIM_TypeDef* pwmTimer, int pwmChannel,
 	pwmChan = pwmChannel;
 	dirPin_port = dirPort;
 	dirPin_mask = dirPin;
-	HAL_TIM_Encoder_Start(encHTimer, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(pwmHTimer, pwmChannel*4);
 }
 
-void Motor::update()
+void Motor::Enable(TIM_HandleTypeDef* encHTimer, TIM_HandleTypeDef* pwmHTimer)
+{
+	HAL_TIM_Encoder_Start(encHTimer, TIM_CHANNEL_1);
+	HAL_TIM_PWM_Start(pwmHTimer, pwmChan*4);
+}
+void Motor::Disable(TIM_HandleTypeDef* encHTimer, TIM_HandleTypeDef* pwmHTimer)
+{
+	//HAL_TIM_Encoder_Stop(encHTimer, TIM_CHANNEL_1);
+	//HAL_TIM_PWM_Stop(pwmHTimer, pwmChan*4);
+}
+void Motor::Update()
 {
 	uint16_t newEncVal = encTim->CNT;
 	int16_t encdelta = newEncVal-lastEncVal;
@@ -42,7 +49,7 @@ void Motor::update()
 	}
 	*(&(pwmTim->CCR1)+pwmChan) = pwm;
 }
-void Motor::setSpeed(int32_t newspeed)
+void Motor::SetSpeed(int32_t newspeed)
 {
 	if(newspeed > MOT_PWM_MAX)
 		newspeed = MOT_PWM_MAX;
@@ -52,7 +59,7 @@ void Motor::setSpeed(int32_t newspeed)
 
 }
 
-void Motor::resetPos()
+void Motor::ResetPos()
 {
 	encPos = 0;
 }

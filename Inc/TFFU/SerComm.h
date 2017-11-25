@@ -31,18 +31,18 @@ const uint8_t CMD_PRINT_HEX = 13;
 
 // VARTYPES: 3 bits, most significant is sign
 const uint8_t VARTYPE_MASK = 0x07; // VARTYPE: 3 bits (8)
-const uint8_t VARTYPE_SIGNED = 0x04;
-const uint8_t VARTYPE_UNSIGNED = 0x00;
-const uint8_t VARTYPE_BYTE  = 1;
-const uint8_t VARTYPE_WORD  = 2;
-const uint8_t VARTYPE_DWORD  = 3;
-const uint8_t VARTYPE_UBYTE  = VARTYPE_UNSIGNED | VARTYPE_BYTE;
-const uint8_t VARTYPE_SBYTE  = VARTYPE_SIGNED   | VARTYPE_BYTE;
-const uint8_t VARTYPE_UWORD  = VARTYPE_UNSIGNED | VARTYPE_WORD;
-const uint8_t VARTYPE_SWORD  = VARTYPE_SIGNED   | VARTYPE_WORD;
-const uint8_t VARTYPE_UDWORD = VARTYPE_UNSIGNED | VARTYPE_DWORD;
-const uint8_t VARTYPE_SDWORD = VARTYPE_SIGNED   | VARTYPE_DWORD;
-const uint8_t VARTYPE_FLOAT  = VARTYPE_SIGNED;
+#define VARTYPE_SIGNED    0x04
+#define VARTYPE_UNSIGNED  0x00
+#define VARTYPE_BYTE   1
+#define VARTYPE_WORD   2
+#define VARTYPE_DWORD  3
+#define VARTYPE_UBYTE  (VARTYPE_UNSIGNED | VARTYPE_BYTE)
+#define VARTYPE_SBYTE  (VARTYPE_SIGNED   | VARTYPE_BYTE)
+#define VARTYPE_UWORD  (VARTYPE_UNSIGNED | VARTYPE_WORD)
+#define VARTYPE_SWORD  (VARTYPE_SIGNED   | VARTYPE_WORD)
+#define VARTYPE_UDWORD (VARTYPE_UNSIGNED | VARTYPE_DWORD)
+#define VARTYPE_SDWORD (VARTYPE_SIGNED   | VARTYPE_DWORD)
+#define VARTYPE_FLOAT  (VARTYPE_SIGNED)
 const uint8_t VARTYPE_SIZES[] = { 4, 1, 2, 4 };
 
 enum SERIAL_STATE
@@ -54,7 +54,8 @@ enum SERIAL_STATE
     SERSTATE_END,
 };
 
-void ParseSerial(unsigned long curtime);
+void ParseSerial();
+void SerialTick();
 void SendMonVar( uint8_t ID, uint8_t vartype, void* ptr );
 void PrintVar( uint8_t vartype, void* ptr, uint8_t command );
 void PrintVarDec( uint8_t vartype, void* ptr );

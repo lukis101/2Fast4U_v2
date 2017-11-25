@@ -18,14 +18,14 @@
 #include <stdint.h>
 #include <string.h>
 
-
 static const uint8_t MSGBUFF_TICK[3] = { PROTOCOL_START, CMD_TICK, PROTOCOL_END };
 static const uint8_t MSGBUFF_VARCOUNT[4] = { PROTOCOL_START, (VARTYPE_UBYTE<<5)|CMD_PARAM_LIST, PARAMCOUNT, PROTOCOL_END };
 static uint8_t MSGBUFF_STRING[3] = { PROTOCOL_START, CMD_PRINT_STRING, 0 };
 static uint8_t MSGBUFF_VAR[8] = { PROTOCOL_START, 0 };
 
-unsigned long ser_lastUpdate = 0; // for timeout
-uint8_t ser_state = SERSTATE_IDLE;
+static unsigned int serTimeout = SERCOM_TIMEOUT;
+
+static uint8_t ser_state = SERSTATE_IDLE;
 uint8_t ser_vartype = 0;
 uint8_t ser_command = 0;
 uint8_t ser_varid = 0; // sent var index
@@ -79,20 +79,30 @@ void PrintString(const char* str, uint8_t len )
     UART_Send((uint8_t*)&PROTOCOL_END, 1);
 }
 
-void ParseSerial(unsigned long curtime)
+void SerialTick()
+{
+    // Check for timeout
+    if (ser_state == SERSTATE_IDLE)
+    {
+    	serTimeout = SERCOM_TIMEOUT;
+    }
+    else
+	{
+    	if (--serTimeout == 0)
+    	{
+    	    ser_state = SERSTATE_IDLE;
+    	    serTimeout = SERCOM_TIMEOUT;
+    	}
+	}
+}
+
+void ParseSerial()
 {
     if (UART_Available()) // Byte by byte input processing
     {
         uint8_t inbyte = UART_Read();
-
-        // Check for timeout
-        if( ser_state != SERSTATE_IDLE )
-            if( curtime-ser_lastUpdate >= SERCOM_TIMEOUT )
-                ser_state = SERSTATE_IDLE;
-        ser_lastUpdate = curtime;
-
         // State-based parsing
-        switch( ser_state )
+        switch (ser_state)
         {
         case SERSTATE_IDLE: // Wait for start token
             if( inbyte == PROTOCOL_START )
@@ -168,17 +178,17 @@ void ParseSerial(unsigned long curtime)
 
                 case CMD_CALIBRATE:
                     //Sensors_Calibrate();
-                    AllParams.RaceMode = RACEMODE_MANUAL;
-                    SendAck(); // Acknowledge
+                	SetDriveMode((uint8_t)DRIVEMODE_MANUAL);// Acknowledge
+                    SendAck();
                     break;
                 case CMD_RACE_START:
                     startFlag = true;
-                    AllParams.RaceMode = RACEMODE_SIMPLE;
+                	SetDriveMode((uint8_t)DRIVEMODE_SIMPLE);
                     SendAck(); // Acknowledge
                     break;
                 case CMD_RACE_STOP:
                     stopFlag = true;
-                    AllParams.RaceMode = RACEMODE_STOP;
+                	SetDriveMode((uint8_t)DRIVEMODE_STOP);
                     SendAck(); // Acknowledge
                     break;
 
@@ -196,7 +206,15 @@ void ParseSerial(unsigned long curtime)
                     break;
 
                 case CMD_PARAM_WRITE:
-                    memcpy( PARAM_PTR(ser_varid), ser_buff, VARTYPE_SIZES[ PARAM_TYPE(ser_varid) & ~VARTYPE_SIGNED ] );
+                    if (ser_varid == PARAMID_DRIVEMODE)
+                    {
+                    	SetDriveMode(ser_buff[0]);
+                        SendParam(ser_varid);
+                    }
+                    else
+                    {
+                    	memcpy( PARAM_PTR(ser_varid), ser_buff, VARTYPE_SIZES[ PARAM_TYPE(ser_varid) & ~VARTYPE_SIGNED ] );
+                    }
                     //SendAck(); // Acknowledge
                     //if( ser_varid==PARAM_MANUAL_ENABLE || ser_varid==PARAM_MONITOR_ENABLE )
                     //    Standby( !(param_monitor_enable || param_manual_enable) );

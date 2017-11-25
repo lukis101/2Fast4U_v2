@@ -12,33 +12,36 @@
 
 #define SENSORS_THRESHOLD 200
 #define SENSORS_MAXVALUE  0x3FF
-
-extern uint16_t sensvals[14];
+#define SENSORS_AMOUNT    14
+extern uint16_t sensvals[SENSORS_AMOUNT];
 
 class Sensors
 {
-public:
+private:
+	uint8_t dataReady;
+	uint8_t groupIdx;
 	const uint8_t SENSORS_BUFFSIZE = 10;
 	//static int16_t offsets[ SENSORS_BUFFSIZE ]; // History of readings
 	static int16_t offsetSum; // Summed readings // TODO: 16/32
 	static int16_t latestOffset;
 	static int8_t latestNum;
 	static int8_t sampleCount;
-	bool sens_enabled = false;
+	bool enabled = false;
 
-	volatile uint16_t sens_values; // Latest single reading
+public:
+	//volatile uint16_t sens_values; // Latest single reading
 	int16_t sens_lastOffset = 0;   // Averaged
 	int16_t sens_curOffset  = 0;   // Averaged
 	int16_t sens_curNum  = 0;
 	int16_t sens_lastNum  = 0;
 
 	uint16_t thresholds; // Latest single reading
+	uint16_t rawValues[SENSORS_AMOUNT];
 	float lastOffset;
 	float curOffset;
 
 public:
-	Sensors(int dummy);
-	//void Init(void);
+	Sensors();
 	void Update(void);
 	void BlockingUpdate(void);
 	void UpdateOffset(void);

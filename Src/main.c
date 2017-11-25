@@ -47,7 +47,13 @@
 #include "gpio.h"
 
 /* USER CODE BEGIN Includes */
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "TFFU/TFFUMain.h"
+#ifdef __cplusplus
+}
+#endif
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/

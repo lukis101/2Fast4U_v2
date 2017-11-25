@@ -17,7 +17,6 @@
 #include "TFFU/PID.h"
 
 
-
 volatile uint32_t last;
 
 char aTxBuffer[100];
@@ -49,6 +48,11 @@ uint32_t nextTick_sensors;
 bool sysTickflag = false;
 void JumpToBootloader();
 
+Motor motorL = Motor(TIM1, TIM3, 0, MOT1_DIR_GPIO_Port, MOT1_DIR_Pin);
+Motor motorR = Motor(TIM2, TIM3, 1, MOT2_DIR_GPIO_Port, MOT2_DIR_Pin);
+Sensors sensors = Sensors();
+//PID pid_angle(&AllParams.PID_Angle, &AllParams.PID_Motors);
+
 void TFFUMain(void)
 {
 	/* Setup */
@@ -56,34 +60,33 @@ void TFFUMain(void)
 	UART_Init();
 	Params_SetDefaults();
 	HAL_TIM_Base_Start(&htim3);
+	motorL.Enable(&htim1, &htim3);
+	motorR.Enable(&htim2, &htim3);
 	//HAL_TIM_Base_Start(&htim4);
 	//HAL_TIM_PWM_Start(&htim4, 0);
 
 	//HAL_GPIO_WritePin(Vmot_EN_GPIO_Port, Vmot_EN_Pin, (GPIO_PinState)(1));
-	Motor motorL(TIM1, TIM3, 0, MOT1_DIR_GPIO_Port, MOT1_DIR_Pin, &htim1, &htim3);
-	Motor motorR(TIM2, TIM3, 1, MOT2_DIR_GPIO_Port, MOT2_DIR_Pin, &htim2, &htim3);
-	motorL.setSpeed(0);
-	motorR.setSpeed(0);
+	SetDriveMode((uint8_t)DRIVEMODE_STOP);
 
-	Sensors sensors(4);
 	sensors.Start();
     PID_Init();
 
 	/* Main loop */
 	while(1)
 	{
-		uint32_t systicks = HAL_GetTick();
-		ParseSerial(systicks);
+		ParseSerial();
 
 		if (sysTickflag== true)
 		{
 			sysTickflag = false;
+			uint32_t systicks = HAL_GetTick();
 			uint32_t millis = systicks % 1000;
 
 			SetPin(LED_L_GPIO_Port, LED_L_Pin); // Red ON
+			SerialTick();
 			sensors.Update();
-			motorL.update();
-			motorR.update();
+			motorL.Update();
+			motorR.Update();
 
             PID_Update( sensors.curOffset );
 
@@ -94,37 +97,32 @@ void TFFUMain(void)
 
 			float speed_l, speed_r;
 			float drivethrottle, driveangle;
-			//float steerspd;
-			switch(AllParams.RaceMode)
+			switch (AllParams.DriveMode)
 			{
-			case RACEMODE_STOP:
+			case DRIVEMODE_STOP:
 				//if (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET)
 				//	AllParams.RaceMode = RACEMODE_MANUAL;
 				//if (HAL_GPIO_ReadPin(BTN2_GPIO_Port, BTN2_Pin) == GPIO_PIN_RESET)
 				//	AllParams.RaceMode = RACEMODE_SIMPLE;
-				motorL.setSpeed(0);
-				motorR.setSpeed(0);
+				SetPin(LED_F_GPIO_Port, LED_F_Pin); // Red ON
 				break;
-			case RACEMODE_MANUAL:
+			case DRIVEMODE_MANUAL:
 				drivethrottle = AllParams.ManualThrottle/255.0*MOT_PWM_MAX;
-				driveangle = 1.0-AllParams.ManualAngle/128.f*drivethrottle;
-			    speed_l = -driveangle;
-			    speed_r = driveangle;
+				driveangle = (1.0-AllParams.ManualAngle/128.f)*drivethrottle;
+			    speed_l = -driveangle;//+drivethrottle;
+			    speed_r = driveangle;//+drivethrottle;
 
-				motorL.setSpeed((int32_t)(speed_l+drivethrottle));
-				motorR.setSpeed((int32_t)(speed_r+drivethrottle));
+				motorL.SetSpeed((int32_t)speed_l);
+				motorR.SetSpeed((int32_t)speed_r);
 				break;
-			case RACEMODE_SIMPLE:
-				drivethrottle = (float)AllParams.MaxPWM;
+			case DRIVEMODE_SIMPLE:
+				drivethrottle = 0;//(float)AllParams.Speed;
 				driveangle = -sensors.curOffset*drivethrottle;
-			    speed_l = -driveangle;
-			    speed_r = driveangle;
+			    speed_l = -driveangle+drivethrottle;
+			    speed_r = driveangle+drivethrottle;
 
-				motorL.setSpeed((int32_t)(speed_l)+drivethrottle);
-				motorR.setSpeed((int32_t)(speed_r)+drivethrottle);
-				break;
-			default:
-				AllParams.RaceMode = RACEMODE_MANUAL;
+				motorL.SetSpeed((int32_t)speed_l);
+				motorR.SetSpeed((int32_t)speed_r);
 				break;
 			}
 			ClearPin(LED_L_GPIO_Port, LED_L_Pin); // Red OFF
@@ -147,6 +145,37 @@ void TFFUMain(void)
 			}
 		}
 	}
+}
+void SetDriveMode(uint8_t newMode)
+{
+	switch (AllParams.DriveMode)
+	{
+	case DRIVEMODE_STOP:
+		//HAL_GPIO_WritePin(Vmot_EN_GPIO_Port, Vmot_EN_Pin, GPIO_PIN_RESET);
+		motorL.SetSpeed(0);
+		motorR.SetSpeed(0);
+		//motorL.Disable(&htim1, &htim3);
+		//motorR.Disable(&htim2, &htim3);
+		break;
+	case DRIVEMODE_MANUAL:
+		//motorL.Enable(&htim1, &htim3);
+		//motorR.Enable(&htim2, &htim3);
+		motorL.SetSpeed(0);
+		motorR.SetSpeed(0);
+		//HAL_GPIO_WritePin(Vmot_EN_GPIO_Port, Vmot_EN_Pin, GPIO_PIN_SET);
+		break;
+	case DRIVEMODE_SIMPLE:
+		//motorL.Enable(&htim1, &htim3);
+		//motorR.Enable(&htim2, &htim3);
+		motorL.SetSpeed(0);
+		motorR.SetSpeed(0);
+		//HAL_GPIO_WritePin(Vmot_EN_GPIO_Port, Vmot_EN_Pin, GPIO_PIN_SET);
+		break;
+	default:
+		SetDriveMode(DRIVEMODE_STOP);
+		return;
+	}
+	AllParams.DriveMode = newMode;
 }
 
 void TFFUSysTick(void)
@@ -206,7 +235,7 @@ void JumpToBootloader(void) {
 	SYSCFG->CFGR1 = 0x01;
 #endif
 	//} ...or if you use HAL drivers
-	//__HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH();	//Call HAL macro to do this for you
+	__HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH();	//Call HAL macro to do this for you
 
 	/**
 	 * Step: Set jump memory location for system memory

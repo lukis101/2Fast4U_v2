@@ -1,13 +1,13 @@
 
 #ifndef TFFUMAIN_H_
 #define TFFUMAIN_H_
-
-#include <stdint.h>
-#include <stdbool.h>
-
 #ifdef __cplusplus
  extern "C" {
 #endif
+
+#include <stdint.h>
+#include <stdbool.h>
+//#include "TFFU/Params.h"
 
 #define SetPin(port, mask) (port->BSRR = mask)
 #define ClearPin(port, mask) (port->BRR = mask)
@@ -31,9 +31,9 @@ enum EVENTS
 	EVENT_RAMP,
 	EVENT_CIRCLE,
 };
-extern const uint8_t NUMEVENTS;
+//extern const uint8_t NUMEVENTS;
 //uint8_t events[NUMEVENTS] = {};
-extern uint8_t lastevent;
+//extern uint8_t lastevent;
 
 extern const uint16_t INTERVAL_VOLTAGE;
 extern const uint16_t INTERVAL_SENSORS;
@@ -51,10 +51,10 @@ extern bool stopFlag;
 
 void TFFUMain(void);
 void TFFUSysTick(void);
+void SetDriveMode(uint8_t newMode);
 
 
 #ifdef __cplusplus
- }
+}
 #endif
-
 #endif /* TFFUMAIN_H_ */

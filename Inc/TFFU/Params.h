@@ -5,65 +5,63 @@
  extern "C" {
 #endif
 
-#include <cstddef>
 #include "TFFU/SerComm.h"
 
 #define PARAM_PTR(ID) (((uint8_t*)&AllParams)+PARAMDATA[ID*2+1])
 #define PARAM_TYPE(ID) (PARAMDATA[ID*2])
 
-typedef enum {
-	RACEMODE_STOP = 0,
-	RACEMODE_MANUAL,
-	RACEMODE_STANDBY,
-	RACEMODE_SIMPLE,
-	RACEMODE_LEARN,
-	RACEMODE_RECALL,
-}RaceMode_t;
-
 typedef struct {
-	float p;
-	float i;
-	float d;
+ 	float p;
+ 	float i;
+ 	float d;
 } PIDParams_t;
 
+typedef enum {
+	DRIVEMODE_STOP = 0,
+	DRIVEMODE_MANUAL,
+	DRIVEMODE_STANDBY,
+	DRIVEMODE_SIMPLE,
+	DRIVEMODE_LEARN,
+	DRIVEMODE_RECALL,
+} DriveMode_t;
+
 // PARAMS
-#define PARAMCOUNT 16
+typedef enum {
+	PARAMID_SPEED = 0,
+	PARAMID_ACCEL,
+	PARAMID_SENS_THRESHOLD,
+	PARAMID_PID_ANG_P,
+	PARAMID_PID_ANG_I,
+	PARAMID_PID_ANG_D,
+	PARAMID_PID_MOT_P,
+	PARAMID_PID_MOT_I,
+	PARAMID_PID_MOT_D,
+	PARAMID_DRIVEMODE,
+	PARAMID_MANU_THROTTLE,
+	PARAMID_MANU_ANGLE,
+	PARAMID_MONI_ENABLE,
+	PARAMID_MONI_INTERVAL,
+	PARAMID_PID_DSMOOTH,
+	PARAMCOUNT,
+} ParamID_t;
+
 typedef struct {
-	int16_t MaxPWM;
+	int16_t Speed;
 	float Accel;
 	uint16_t SensThreshold;
 	PIDParams_t PID_Angle;
 	PIDParams_t PID_Motors;
-	uint8_t RaceMode; // Hold / Manual / Learn / Memory race / Plain race
-	uint8_t DriveMode;
+	uint8_t DriveMode; // Hold / Manual / Learn / Memory race / Plain race
 	int16_t ManualThrottle;
 	int16_t ManualAngle;
 	uint8_t MonitoringEnable;
-	uint16_t MonitoringMask;
 	uint16_t MonitoringInterval;
 	uint16_t pid_d_smoothing;
 } AllParams_t;
 extern AllParams_t AllParams;
 
 // Types of of variables and memory offsets
-const uint8_t PARAMDATA[ PARAMCOUNT*2 ] = {
-	VARTYPE_SWORD, offsetof(AllParams_t, MaxPWM),
-	VARTYPE_FLOAT, offsetof(AllParams_t, Accel),
-	VARTYPE_UWORD, offsetof(AllParams_t, SensThreshold),
-	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Angle.p),
-	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Angle.i),
-	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Angle.d),
-	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Motors.p),
-	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Motors.i),
-	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Motors.d),
-	VARTYPE_UBYTE, offsetof(AllParams_t, RaceMode),
-	VARTYPE_UBYTE, offsetof(AllParams_t, DriveMode),
-	VARTYPE_SWORD, offsetof(AllParams_t, ManualThrottle),
-	VARTYPE_SWORD, offsetof(AllParams_t, ManualAngle),
-	VARTYPE_UBYTE, offsetof(AllParams_t, MonitoringEnable),
-	VARTYPE_UWORD, offsetof(AllParams_t, MonitoringMask),
-	VARTYPE_UWORD, offsetof(AllParams_t, MonitoringInterval),
-};
+extern const uint8_t PARAMDATA[ PARAMCOUNT*2 ];
 
 typedef enum {
 	MONVAR_VOLTAGE = 0,

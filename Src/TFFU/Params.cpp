@@ -1,27 +1,44 @@
 
-//#include <i2c.h>
 #include <stdint.h>
+#include <cstddef>
 
 #include "TFFU/Params.h"
-
 
 AllParams_t AllParams;
 
 void Params_SetDefaults()
 {
-	AllParams.MaxPWM = 50;
+	AllParams.Speed = 50;
 	AllParams.Accel = 1;
 	AllParams.SensThreshold = 800;
 	AllParams.PID_Angle  = {1.0, 1.0, 1.0};
-	AllParams.PID_Motors.p = 1;
-	AllParams.PID_Motors.i = 1;
-	AllParams.PID_Motors.d = 1;
+	AllParams.PID_Angle  = {1.0, 1.0, 1.0};
+	AllParams.DriveMode = DRIVEMODE_STOP;
 	AllParams.ManualThrottle = 0;
 	AllParams.ManualAngle = 0;
-	AllParams.DriveMode = 0;
 	AllParams.MonitoringEnable = 1;
 	AllParams.MonitoringInterval = 200;
+	AllParams.pid_d_smoothing = 1;;
 }
+
+// Types of of variables and memory offsets
+const uint8_t PARAMDATA[ PARAMCOUNT*2 ] = {
+	VARTYPE_SWORD, offsetof(AllParams_t, Speed),
+	VARTYPE_FLOAT, offsetof(AllParams_t, Accel),
+	VARTYPE_UWORD, offsetof(AllParams_t, SensThreshold),
+	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Angle.p),
+	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Angle.i),
+	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Angle.d),
+	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Motors.p),
+	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Motors.i),
+	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Motors.d),
+	VARTYPE_UBYTE, offsetof(AllParams_t, DriveMode),
+	VARTYPE_SWORD, offsetof(AllParams_t, ManualThrottle),
+	VARTYPE_SWORD, offsetof(AllParams_t, ManualAngle),
+	VARTYPE_UBYTE, offsetof(AllParams_t, MonitoringEnable),
+	VARTYPE_UWORD, offsetof(AllParams_t, MonitoringInterval),
+	VARTYPE_FLOAT, offsetof(AllParams_t, pid_d_smoothing),
+};
 
 // PARAMS
 /*int16_t param_maxspeed = 90;
