@@ -7,22 +7,25 @@
 #include <stdint.h>
 #include "TFFU/Params.h"
 
+#define D_HIST_SIZE 15
 
 class PID
 {
+protected:
+	float lastErr;
 public:
-	PIDParams_t params;
+	PIDParams_t* params;
+	PIDParams_t values;
 	float deriv_avg;
 	float unstable;
 	float output;
-	int16_t lastErr;
-	PIDParams_t val;
-	uint8_t D_HIST_SIZE;  //4
-	float d_hist[ 100 ];
+	float d_hist[D_HIST_SIZE];
 	uint8_t d_hist_i;
+
 public:
-	void PID_Init();
-	float PID_Update( int16_t error );
+	PID(PIDParams_t* params);
+	void Init();
+	float Update(float error);
 };
 
 

@@ -51,7 +51,7 @@ void JumpToBootloader();
 Motor motorL = Motor(TIM1, TIM3, 0, MOT1_DIR_GPIO_Port, MOT1_DIR_Pin);
 Motor motorR = Motor(TIM2, TIM3, 1, MOT2_DIR_GPIO_Port, MOT2_DIR_Pin);
 Sensors sensors = Sensors();
-//PID pid_angle(&AllParams.PID_Angle, &AllParams.PID_Motors);
+PID PID_Angle(&AllParams.PID_Angle);
 
 void TFFUMain(void)
 {
@@ -69,7 +69,6 @@ void TFFUMain(void)
 	SetDriveMode((uint8_t)DRIVEMODE_STOP);
 
 	sensors.Start();
-    //PID_Init();
 
 	/* Main loop */
 	while(1)
@@ -116,8 +115,9 @@ void TFFUMain(void)
 				motorR.SetSpeed((int32_t)speed_r);
 				break;
 			case DRIVEMODE_SIMPLE:
+				float pidang = -PID_Angle.Update(sensors.curOffset);
 				drivethrottle = (float)AllParams.Speed;
-				driveangle = -sensors.curOffset*drivethrottle;
+				driveangle = pidang*drivethrottle;
 			    speed_l = -driveangle+drivethrottle;
 			    speed_r = driveangle+drivethrottle;
 
@@ -136,8 +136,11 @@ void TFFUMain(void)
 
 					SendMonVar(MONVAR_OFFSET, VARTYPE_FLOAT, &sensors.curOffset);
 					SendMonVar(MONVAR_SENSORS, VARTYPE_UWORD, &sensors.thresholds);
-					SendMonVar(MONVAR_2, VARTYPE_SDWORD, &motorL.realSpeed);
-					SendMonVar(MONVAR_3, VARTYPE_SDWORD, &motorR.realSpeed);
+					SendMonVar(MONVAR_1, VARTYPE_FLOAT, &PID_Angle.values.p);
+					SendMonVar(MONVAR_2, VARTYPE_FLOAT, &PID_Angle.values.i);
+					SendMonVar(MONVAR_3, VARTYPE_FLOAT, &PID_Angle.values.d);
+					//SendMonVar(MONVAR_2, VARTYPE_SDWORD, &motorL.realSpeed);
+					//SendMonVar(MONVAR_3, VARTYPE_SDWORD, &motorR.realSpeed);
 
 					nextTick_monitor = systicks + AllParams.MonitoringInterval;
 					ClearPin(LED_F_GPIO_Port, LED_F_Pin); // Green OFF
@@ -165,6 +168,7 @@ void SetDriveMode(uint8_t newMode)
 		//HAL_GPIO_WritePin(Vmot_EN_GPIO_Port, Vmot_EN_Pin, GPIO_PIN_SET);
 		break;
 	case DRIVEMODE_SIMPLE:
+	    PID_Angle.Init();
 		motorL.Enable(&htim1, &htim3);
 		motorR.Enable(&htim2, &htim3);
 		motorL.SetSpeed(0);

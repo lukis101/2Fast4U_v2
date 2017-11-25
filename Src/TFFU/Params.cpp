@@ -8,17 +8,17 @@ AllParams_t AllParams;
 
 void Params_SetDefaults()
 {
-	AllParams.Speed = 50;
+	AllParams.Speed = 100;
 	AllParams.Accel = 1;
 	AllParams.SensThreshold = 750;
-	AllParams.PID_Angle  = {1.0, 1.0, 1.0};
-	AllParams.PID_Angle  = {1.0, 1.0, 1.0};
+	AllParams.PID_Angle  = {1.5, 1.0, 1.8};
+	AllParams.PID_Motors = {1.0, 1.0, 1.0};
 	AllParams.DriveMode = DRIVEMODE_STOP;
 	AllParams.ManualThrottle = 0;
 	AllParams.ManualAngle = 0;
 	AllParams.MonitoringEnable = 1;
-	AllParams.MonitoringInterval = 200;
-	AllParams.pid_d_smoothing = 1;;
+	AllParams.MonitoringInterval = 100;
+	AllParams.pid_d_smoothing = 0.05;
 }
 
 // Types of of variables and memory offsets

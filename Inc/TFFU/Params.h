@@ -56,7 +56,7 @@ typedef struct {
 	int16_t ManualAngle;
 	uint8_t MonitoringEnable;
 	uint16_t MonitoringInterval;
-	uint16_t pid_d_smoothing;
+	float pid_d_smoothing;
 } AllParams_t;
 extern AllParams_t AllParams;
 
