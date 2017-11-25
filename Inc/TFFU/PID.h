@@ -4,20 +4,27 @@
 #ifdef __cplusplus
  extern "C" {
 #endif
-
 #include <stdint.h>
+#include "TFFU/Params.h"
 
-extern float pid_prop;
-extern float pid_integ;
-extern float pid_deriv;
-extern float pid_deriv_avg;
-extern float pid_unstable;
-extern int16_t pid_output;
 
-extern int16_t lastErr;
+class PID
+{
+public:
+	PIDParams_t params;
+	float deriv_avg;
+	float unstable;
+	float output;
+	int16_t lastErr;
+	PIDParams_t val;
+	uint8_t D_HIST_SIZE;  //4
+	float d_hist[ 100 ];
+	uint8_t d_hist_i;
+public:
+	void PID_Init();
+	float PID_Update( int16_t error );
+};
 
-void PID_Init();
-void PID_Update( int16_t error );
 
 #ifdef __cplusplus
 }

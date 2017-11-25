@@ -69,7 +69,7 @@ void TFFUMain(void)
 	SetDriveMode((uint8_t)DRIVEMODE_STOP);
 
 	sensors.Start();
-    PID_Init();
+    //PID_Init();
 
 	/* Main loop */
 	while(1)
@@ -88,7 +88,7 @@ void TFFUMain(void)
 			motorL.Update();
 			motorR.Update();
 
-            PID_Update( sensors.curOffset );
+            //PID_Update( sensors.curOffset );
 
 			if (millis == 0) // heartbeat
 				SetPin(LED_R_GPIO_Port, LED_R_Pin); // Blue ON
