@@ -14,6 +14,7 @@
 #include "TFFU/Params.h"
 #include "TFFU/Motor.h"
 #include "TFFU/Sensors.h"
+#include "TFFU/PID.h"
 
 
 
@@ -46,6 +47,7 @@ uint32_t lastTick_sensors;
 uint32_t nextTick_sensors;
 
 bool sysTickflag = false;
+void JumpToBootloader();
 
 void TFFUMain(void)
 {
@@ -54,6 +56,8 @@ void TFFUMain(void)
 	UART_Init();
 	Params_SetDefaults();
 	HAL_TIM_Base_Start(&htim3);
+	//HAL_TIM_Base_Start(&htim4);
+	//HAL_TIM_PWM_Start(&htim4, 0);
 
 	//HAL_GPIO_WritePin(Vmot_EN_GPIO_Port, Vmot_EN_Pin, (GPIO_PinState)(1));
 	Motor motorL(TIM1, TIM3, 0, MOT1_DIR_GPIO_Port, MOT1_DIR_Pin, &htim1, &htim3);
@@ -63,6 +67,7 @@ void TFFUMain(void)
 
 	Sensors sensors(4);
 	sensors.Start();
+    PID_Init();
 
 	/* Main loop */
 	while(1)
@@ -70,91 +75,75 @@ void TFFUMain(void)
 		uint32_t systicks = HAL_GetTick();
 		ParseSerial(systicks);
 
-		if(AllParams.ManualThrottle > 50)
-			HAL_GPIO_WritePin(LED_L_GPIO_Port,LED_L_Pin, (GPIO_PinState)(1));
-		else
-			HAL_GPIO_WritePin(LED_L_GPIO_Port,LED_L_Pin, (GPIO_PinState)(0));
-
 		if (sysTickflag== true)
 		{
 			sysTickflag = false;
 			uint32_t millis = systicks % 1000;
 
+			SetPin(LED_L_GPIO_Port, LED_L_Pin); // Red ON
+			sensors.Update();
 			motorL.update();
 			motorR.update();
-			sensors.Update();
 
+            PID_Update( sensors.curOffset );
 
 			if (millis == 0) // heartbeat
-			{
-				//HAL_GPIO_WritePin(LED_L_GPIO_Port,LED_L_Pin, (GPIO_PinState)(1));
-				HAL_GPIO_WritePin(LED_R_GPIO_Port,LED_R_Pin, (GPIO_PinState)(1));
-				//SendMonVar(MONVAR_VOLTAGE, VARTYPE_UDWORD, &systicks);
-			}
+				SetPin(LED_R_GPIO_Port, LED_R_Pin); // Blue OFF
 			else if (millis == 100) // heartbeat
+				ClearPin(LED_R_GPIO_Port, LED_R_Pin); // Blue OFF
+
+			float speed_l, speed_r;
+			float drivethrottle, driveangle;
+			//float steerspd;
+			switch(AllParams.RaceMode)
 			{
-				//HAL_GPIO_WritePin(LED_L_GPIO_Port,LED_L_Pin, (GPIO_PinState)(0));
-				HAL_GPIO_WritePin(LED_R_GPIO_Port,LED_R_Pin, (GPIO_PinState)(0));
-				//HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
-			}
-			//if (systicks % 10 == 0) // motors
-			{
-				float speed_l, speed_r;
-				float drivethrottle = AllParams.ManualThrottle/255.0*MOT_PWM_MAX;
-				float driveangle = -sensors.curOffset;//AllParams.ManualAngle/128.f;
-			    if( driveangle <= 0.f ) // Left
-			    {
-			        speed_l = driveangle;
-			        speed_r = -driveangle;
-			    }
-			    else // Right
-			    {
-			        speed_l = driveangle;
-			        speed_r = -driveangle;
-			    }
-			    float steerspd = AllParams.MaxPWM;
-			    speed_l = -driveangle*steerspd;
-			    speed_r = driveangle*steerspd;
+			case RACEMODE_STOP:
+				//if (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET)
+				//	AllParams.RaceMode = RACEMODE_MANUAL;
+				//if (HAL_GPIO_ReadPin(BTN2_GPIO_Port, BTN2_Pin) == GPIO_PIN_RESET)
+				//	AllParams.RaceMode = RACEMODE_SIMPLE;
+				motorL.setSpeed(0);
+				motorR.setSpeed(0);
+				break;
+			case RACEMODE_MANUAL:
+				drivethrottle = AllParams.ManualThrottle/255.0*MOT_PWM_MAX;
+				driveangle = 1.0-AllParams.ManualAngle/128.f*drivethrottle;
+			    speed_l = -driveangle;
+			    speed_r = driveangle;
 
 				motorL.setSpeed((int32_t)(speed_l+drivethrottle));
 				motorR.setSpeed((int32_t)(speed_r+drivethrottle));
+				break;
+			case RACEMODE_SIMPLE:
+				drivethrottle = (float)AllParams.MaxPWM;
+				driveangle = -sensors.curOffset*drivethrottle;
+			    speed_l = -driveangle;
+			    speed_r = driveangle;
+
+				motorL.setSpeed((int32_t)(speed_l)+drivethrottle);
+				motorR.setSpeed((int32_t)(speed_r)+drivethrottle);
+				break;
+			default:
+				AllParams.RaceMode = RACEMODE_MANUAL;
+				break;
 			}
-			if (systicks % 200 == 0)
-			{
-				HAL_GPIO_WritePin(LED_F_GPIO_Port,LED_F_Pin, (GPIO_PinState)(1));
-				//while (HAL_I2C_IsDeviceReady(&hi2c1, (uint16_t)(0x34), 3, 100) != HAL_OK) {}
-				//while (HAL_I2C_IsDeviceReady(&hi2c1, (uint16_t)(0x36), 3, 100) != HAL_OK) {}
-
-				SendMonVar(MONVAR_2, VARTYPE_SDWORD, &motorL.realSpeed);
-				SendMonVar(MONVAR_3, VARTYPE_SDWORD, &motorR.realSpeed);
-				//SendMonVar(MONVAR_1, VARTYPE_FLOAT, &sensors.curOffset);
-				//SendMonVar(MONVAR_SENSORS, VARTYPE_UWORD, &sensors.thresholds);
-
-				//int outstrlen = 0;
-
-				//char formatenc[] = "%05d %05d";
-				//outstrlen += sprintf(aTxBuffer+outstrlen, formatenc, tim1val, tim2val);
-
-				//uint8_t vals[14*2];
-
-				/*uint8_t targetvalue = 1;
-				HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)(0x34), &targetvalue, 1, 100);
-				HAL_I2C_Master_Receive(&hi2c1, (uint16_t)(0x34), vals, 7*2, 100);
-				HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)(0x36), &targetvalue, 1, 100);
-				HAL_I2C_Master_Receive(&hi2c1, (uint16_t)(0x36), vals+7*2, 7*2, 100);
-				char format16[] = "%04d ";
-				for(int i=0; i<14; i++)
-					outstrlen += sprintf(aTxBuffer+outstrlen, format16, ((uint16_t*)vals)[i]);
-				aTxBuffer[outstrlen++] = '\n';
-				UART_Send((uint8_t*)aTxBuffer, outstrlen);*/
-
-				//HAL_Delay(1);
-				HAL_GPIO_WritePin(LED_F_GPIO_Port,LED_F_Pin, (GPIO_PinState)(0));
-			}
+			ClearPin(LED_L_GPIO_Port, LED_L_Pin); // Red OFF
 
 			/// MONITORING / DEBUG
-			if( AllParams.MonitoringInterval > 0 )
+			if( AllParams.MonitoringEnable != 0 )
 			{
+				if (systicks >= nextTick_monitor)
+				{
+					SetPin(LED_F_GPIO_Port, LED_F_Pin); // Green ON
+
+					SendMonVar(MONVAR_OFFSET, VARTYPE_FLOAT, &sensors.curOffset);
+					SendMonVar(MONVAR_SENSORS, VARTYPE_UWORD, &sensors.thresholds);
+					SendMonVar(MONVAR_2, VARTYPE_SDWORD, &motorL.realSpeed);
+					SendMonVar(MONVAR_3, VARTYPE_SDWORD, &motorR.realSpeed);
+
+					nextTick_monitor = systicks + AllParams.MonitoringInterval;
+					ClearPin(LED_F_GPIO_Port, LED_F_Pin); // Green OFF
+				}
 			}
 		}
 	}
@@ -163,4 +152,85 @@ void TFFUMain(void)
 void TFFUSysTick(void)
 {
 	sysTickflag = true;
+}
+
+// 0x1FFFF796
+void JumpToBootloader(void) {
+	void (*SysMemBootJump)(void);
+
+	/**
+	 * Step: Set system memory address.
+	 *
+	 *       For STM32F429, system memory is on 0x1FFF 0000
+	 *       For other families, check AN2606 document table 110 with descriptions of memory addresses
+	 */
+	volatile uint32_t addr = 0x1FFFF796;
+
+	/**
+	 * Step: Disable RCC, set it to default (after reset) settings
+	 *       Internal clock, no PLL, etc.
+	 */
+#if defined(USE_HAL_DRIVER)
+	HAL_RCC_DeInit();
+#endif /* defined(USE_HAL_DRIVER) */
+#if defined(USE_STDPERIPH_DRIVER)
+	RCC_DeInit();
+#endif /* defined(USE_STDPERIPH_DRIVER) */
+
+	/**
+	 * Step: Disable systick timer and reset it to default values
+	 */
+	SysTick->CTRL = 0;
+	SysTick->LOAD = 0;
+	SysTick->VAL = 0;
+
+	/**
+	 * Step: Disable all interrupts
+	 */
+	__disable_irq();
+
+	/**
+	 * Step: Remap system memory to address 0x0000 0000 in address space
+	 *       For each family registers may be different.
+	 *       Check reference manual for each family.
+	 *
+	 *       For STM32F4xx, MEMRMP register in SYSCFG is used (bits[1:0])
+	 *       For STM32F0xx, CFGR1 register in SYSCFG is used (bits[1:0])
+	 *       For others, check family reference manual
+	 */
+	//Remap by hand... {
+#if defined(STM32F4)
+	SYSCFG->MEMRMP = 0x01;
+#endif
+#if defined(STM32F0)
+	SYSCFG->CFGR1 = 0x01;
+#endif
+	//} ...or if you use HAL drivers
+	//__HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH();	//Call HAL macro to do this for you
+
+	/**
+	 * Step: Set jump memory location for system memory
+	 *       Use address with 4 bytes offset which specifies jump location where program starts
+	 */
+	SysMemBootJump = (void (*)(void)) (*((uint32_t *)(addr + 4)));
+
+	/**
+	 * Step: Set main stack pointer.
+	 *       This step must be done last otherwise local variables in this function
+	 *       don't have proper value since stack pointer is located on different position
+	 *
+	 *       Set direct address location which specifies stack pointer in SRAM location
+	 */
+	__set_MSP(*(uint32_t *)addr);
+
+	/**
+	 * Step: Actually call our function to jump to set location
+	 *       This will start system memory execution
+	 */
+	SysMemBootJump();
+
+	/**
+	 * Step: Connect USB<->UART converter to dedicated USART pins and test
+	 *       and test with bootloader works with STM32 Flash Loader Demonstrator software
+	 */
 }

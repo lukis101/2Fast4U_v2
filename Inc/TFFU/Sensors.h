@@ -10,8 +10,10 @@
 #define SENSORS_ADDR1 0x34
 #define SENSORS_ADDR2 0x36
 
-#define SENSORS_THRESHOLD 400
+#define SENSORS_THRESHOLD 200
 #define SENSORS_MAXVALUE  0x3FF
+
+extern uint16_t sensvals[14];
 
 class Sensors
 {
@@ -41,6 +43,7 @@ public:
 	void BlockingUpdate(void);
 	void UpdateOffset(void);
 	void Start(void);
+	void StartRead(void);
 	void Stop(void);
 	void Calibrate(void);
 };

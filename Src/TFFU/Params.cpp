@@ -11,6 +11,7 @@ void Params_SetDefaults()
 {
 	AllParams.MaxPWM = 50;
 	AllParams.Accel = 1;
+	AllParams.SensThreshold = 800;
 	AllParams.PID_Angle  = {1.0, 1.0, 1.0};
 	AllParams.PID_Motors.p = 1;
 	AllParams.PID_Motors.i = 1;
@@ -18,6 +19,8 @@ void Params_SetDefaults()
 	AllParams.ManualThrottle = 0;
 	AllParams.ManualAngle = 0;
 	AllParams.DriveMode = 0;
+	AllParams.MonitoringEnable = 1;
+	AllParams.MonitoringInterval = 200;
 }
 
 // PARAMS

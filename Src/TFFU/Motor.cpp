@@ -1,5 +1,6 @@
 
 #include "TFFU/Motor.h"
+#include "TFFU/TFFUMain.h"
 
 Motor::Motor(TIM_TypeDef* encTimer, TIM_TypeDef* pwmTimer, int pwmChannel,
 		GPIO_TypeDef* dirPort, int dirPin,
@@ -27,17 +28,17 @@ void Motor::update()
 	lastEncVal = newEncVal;
 
 	//float err = realSpeed/120.f-;
-	int16_t motspd = targetSpeed+(targetSpeed-realSpeed/120.f);
+	int16_t motspd = targetSpeed;//+(targetSpeed-realSpeed/120.f);
 	uint16_t pwm;
 	if (motspd >= 0)
 	{
 		pwm = MOT_PWM_MAX-motspd;
-		dirPin_port->BSRR = dirPin_mask; // High
+		SetPin(dirPin_port, dirPin_mask); // High
 	}
 	else
 	{
 		pwm = -motspd;
-		dirPin_port->BRR  = dirPin_mask; // Low
+		ClearPin(dirPin_port, dirPin_mask); // Low
 	}
 	*(&(pwmTim->CCR1)+pwmChan) = pwm;
 }

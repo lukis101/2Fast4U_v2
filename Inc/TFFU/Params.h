@@ -27,10 +27,11 @@ typedef struct {
 } PIDParams_t;
 
 // PARAMS
-#define PARAMCOUNT 15
+#define PARAMCOUNT 16
 typedef struct {
 	int16_t MaxPWM;
 	float Accel;
+	uint16_t SensThreshold;
 	PIDParams_t PID_Angle;
 	PIDParams_t PID_Motors;
 	uint8_t RaceMode; // Hold / Manual / Learn / Memory race / Plain race
@@ -39,7 +40,8 @@ typedef struct {
 	int16_t ManualAngle;
 	uint8_t MonitoringEnable;
 	uint16_t MonitoringMask;
-	uint8_t MonitoringInterval;
+	uint16_t MonitoringInterval;
+	uint16_t pid_d_smoothing;
 } AllParams_t;
 extern AllParams_t AllParams;
 
@@ -47,6 +49,7 @@ extern AllParams_t AllParams;
 const uint8_t PARAMDATA[ PARAMCOUNT*2 ] = {
 	VARTYPE_SWORD, offsetof(AllParams_t, MaxPWM),
 	VARTYPE_FLOAT, offsetof(AllParams_t, Accel),
+	VARTYPE_UWORD, offsetof(AllParams_t, SensThreshold),
 	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Angle.p),
 	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Angle.i),
 	VARTYPE_FLOAT, offsetof(AllParams_t, PID_Angle.d),
@@ -59,7 +62,7 @@ const uint8_t PARAMDATA[ PARAMCOUNT*2 ] = {
 	VARTYPE_SWORD, offsetof(AllParams_t, ManualAngle),
 	VARTYPE_UBYTE, offsetof(AllParams_t, MonitoringEnable),
 	VARTYPE_UWORD, offsetof(AllParams_t, MonitoringMask),
-	VARTYPE_UBYTE, offsetof(AllParams_t, MonitoringInterval),
+	VARTYPE_UWORD, offsetof(AllParams_t, MonitoringInterval),
 };
 
 typedef enum {

@@ -168,14 +168,17 @@ void ParseSerial(unsigned long curtime)
 
                 case CMD_CALIBRATE:
                     //Sensors_Calibrate();
+                    AllParams.RaceMode = RACEMODE_MANUAL;
                     SendAck(); // Acknowledge
                     break;
                 case CMD_RACE_START:
                     startFlag = true;
+                    AllParams.RaceMode = RACEMODE_SIMPLE;
                     SendAck(); // Acknowledge
                     break;
                 case CMD_RACE_STOP:
                     stopFlag = true;
+                    AllParams.RaceMode = RACEMODE_STOP;
                     SendAck(); // Acknowledge
                     break;
 

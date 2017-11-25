@@ -9,6 +9,8 @@
  extern "C" {
 #endif
 
+#define SetPin(port, mask) (port->BSRR = mask)
+#define ClearPin(port, mask) (port->BRR = mask)
 
 // VARS
 extern uint8_t raceActive;
