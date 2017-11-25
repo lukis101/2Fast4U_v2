@@ -90,7 +90,7 @@ void Sensors::UpdateOffset(void)
 	}
 	if(count > 0 )
 	{
-		float newoffs = wsum/unwsum;
+		float newoffs = wsum/unwsum/WEIGTH_MAX;
 		/*if(newoffs > 1.f)
 			newoffs = 1.f;
 		else if(newoffs < -1.f)

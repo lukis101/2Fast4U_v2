@@ -10,7 +10,7 @@ void Params_SetDefaults()
 {
 	AllParams.Speed = 50;
 	AllParams.Accel = 1;
-	AllParams.SensThreshold = 800;
+	AllParams.SensThreshold = 750;
 	AllParams.PID_Angle  = {1.0, 1.0, 1.0};
 	AllParams.PID_Angle  = {1.0, 1.0, 1.0};
 	AllParams.DriveMode = DRIVEMODE_STOP;

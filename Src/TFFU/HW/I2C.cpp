@@ -35,6 +35,7 @@ bool I2C_Available(void)
 void I2C_Read(uint8_t devAddr, uint8_t amount, uint8_t* pBuff, uint8_t* flag)
 {
 	targetFlag = flag;
+	while (i2cbusy);
 	i2cbusy = true;
 	HAL_I2C_Master_Receive_DMA(&hi2c1, (uint16_t)(devAddr), pBuff, amount);
 }

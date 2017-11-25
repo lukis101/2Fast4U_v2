@@ -91,7 +91,7 @@ void TFFUMain(void)
             PID_Update( sensors.curOffset );
 
 			if (millis == 0) // heartbeat
-				SetPin(LED_R_GPIO_Port, LED_R_Pin); // Blue OFF
+				SetPin(LED_R_GPIO_Port, LED_R_Pin); // Blue ON
 			else if (millis == 100) // heartbeat
 				ClearPin(LED_R_GPIO_Port, LED_R_Pin); // Blue OFF
 
@@ -104,19 +104,19 @@ void TFFUMain(void)
 				//	AllParams.RaceMode = RACEMODE_MANUAL;
 				//if (HAL_GPIO_ReadPin(BTN2_GPIO_Port, BTN2_Pin) == GPIO_PIN_RESET)
 				//	AllParams.RaceMode = RACEMODE_SIMPLE;
-				SetPin(LED_F_GPIO_Port, LED_F_Pin); // Red ON
+				//SetPin(LED_F_GPIO_Port, LED_F_Pin); // Red ON
 				break;
 			case DRIVEMODE_MANUAL:
 				drivethrottle = AllParams.ManualThrottle/255.0*MOT_PWM_MAX;
-				driveangle = (1.0-AllParams.ManualAngle/128.f)*drivethrottle;
-			    speed_l = -driveangle;//+drivethrottle;
-			    speed_r = driveangle;//+drivethrottle;
+				driveangle = (AllParams.ManualAngle/128.f)*drivethrottle;
+			    speed_l = -driveangle+drivethrottle;
+			    speed_r = driveangle+drivethrottle;
 
 				motorL.SetSpeed((int32_t)speed_l);
 				motorR.SetSpeed((int32_t)speed_r);
 				break;
 			case DRIVEMODE_SIMPLE:
-				drivethrottle = 0;//(float)AllParams.Speed;
+				drivethrottle = (float)AllParams.Speed;
 				driveangle = -sensors.curOffset*drivethrottle;
 			    speed_l = -driveangle+drivethrottle;
 			    speed_r = driveangle+drivethrottle;
@@ -148,25 +148,25 @@ void TFFUMain(void)
 }
 void SetDriveMode(uint8_t newMode)
 {
-	switch (AllParams.DriveMode)
+	switch (newMode)
 	{
 	case DRIVEMODE_STOP:
 		//HAL_GPIO_WritePin(Vmot_EN_GPIO_Port, Vmot_EN_Pin, GPIO_PIN_RESET);
 		motorL.SetSpeed(0);
 		motorR.SetSpeed(0);
-		//motorL.Disable(&htim1, &htim3);
-		//motorR.Disable(&htim2, &htim3);
+		motorL.Disable(&htim1, &htim3);
+		motorR.Disable(&htim2, &htim3);
 		break;
 	case DRIVEMODE_MANUAL:
-		//motorL.Enable(&htim1, &htim3);
-		//motorR.Enable(&htim2, &htim3);
+		motorL.Enable(&htim1, &htim3);
+		motorR.Enable(&htim2, &htim3);
 		motorL.SetSpeed(0);
 		motorR.SetSpeed(0);
 		//HAL_GPIO_WritePin(Vmot_EN_GPIO_Port, Vmot_EN_Pin, GPIO_PIN_SET);
 		break;
 	case DRIVEMODE_SIMPLE:
-		//motorL.Enable(&htim1, &htim3);
-		//motorR.Enable(&htim2, &htim3);
+		motorL.Enable(&htim1, &htim3);
+		motorR.Enable(&htim2, &htim3);
 		motorL.SetSpeed(0);
 		motorR.SetSpeed(0);
 		//HAL_GPIO_WritePin(Vmot_EN_GPIO_Port, Vmot_EN_Pin, GPIO_PIN_SET);
