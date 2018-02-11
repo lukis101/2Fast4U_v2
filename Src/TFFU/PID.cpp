@@ -55,13 +55,13 @@ float PID::Update( float error )
         deriv += d_hist[i];
     deriv = deriv / D_HIST_SIZE;
         // 2) Smoothing using exponentially decaying moving average
-    deriv_avg = AllParams.pid_d_smoothing*deriv + (1.f-AllParams.pid_d_smoothing)*deriv_avg;
+    deriv_avg = deriv*AllParams.pid_d_smoothing + deriv_avg*(1.f-AllParams.pid_d_smoothing);
 
     values.d = deriv_avg * params->d;
 
     // Unsatability factor
-    //float unstabl = fabsf(pid_deriv_avg*param_accel);
-    //pid_unstable = param_unstable_smoothing*unstabl + (1.f-param_unstable_smoothing)*pid_unstable;
+    //float unstabl = deriv_avg*AllParams.pid_unst;
+    //unstability = unstabl*AllParams.pid_unst_smoothing + unstability*(1.f-AllParams.pid_unst_smoothing);
 
     // Main
     float outp = (values.p) + (values.d);// + (values.i);

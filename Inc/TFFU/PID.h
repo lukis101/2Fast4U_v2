@@ -17,7 +17,7 @@ public:
 	PIDParams_t* params;
 	PIDParams_t values;
 	float deriv_avg;
-	float unstable;
+	float unstability;
 	float output;
 	float d_hist[D_HIST_SIZE];
 	uint8_t d_hist_i;

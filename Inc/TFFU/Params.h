@@ -29,7 +29,8 @@ typedef enum {
 typedef enum {
 	PARAMID_SPEED = 0,
 	PARAMID_ACCEL,
-	PARAMID_SENS_THRESHOLD,
+	PARAMID_SENS_MIN,
+	PARAMID_SENS_MAX,
 	PARAMID_PID_ANG_P,
 	PARAMID_PID_ANG_I,
 	PARAMID_PID_ANG_D,
@@ -42,13 +43,16 @@ typedef enum {
 	PARAMID_MONI_ENABLE,
 	PARAMID_MONI_INTERVAL,
 	PARAMID_PID_DSMOOTH,
+	PARAMID_PID_USMOOTH,
+	PARAMID_PID_UNSTABILITY,
 	PARAMCOUNT,
 } ParamID_t;
 
 typedef struct {
 	int16_t Speed;
 	float Accel;
-	uint16_t SensThreshold;
+	uint16_t SensMin;
+	uint16_t SensMax;
 	PIDParams_t PID_Angle;
 	PIDParams_t PID_Motors;
 	uint8_t DriveMode; // Hold / Manual / Learn / Memory race / Plain race
@@ -57,6 +61,8 @@ typedef struct {
 	uint8_t MonitoringEnable;
 	uint16_t MonitoringInterval;
 	float pid_d_smoothing;
+	float pid_unst_smoothing;
+	float pid_unst;
 } AllParams_t;
 extern AllParams_t AllParams;
 

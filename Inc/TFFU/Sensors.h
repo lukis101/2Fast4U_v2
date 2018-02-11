@@ -11,7 +11,7 @@
 #define SENSORS_ADDR2 0x36
 
 #define SENSORS_THRESHOLD 200
-#define SENSORS_MAXVALUE  0x3FF
+#define SENSORS_MAXVALUE  (0x3FF)
 #define SENSORS_AMOUNT    14
 extern uint16_t sensvals[SENSORS_AMOUNT];
 
@@ -37,6 +37,7 @@ public:
 
 	uint16_t thresholds; // Latest single reading
 	uint16_t rawValues[SENSORS_AMOUNT];
+	float values[SENSORS_AMOUNT];
 	float lastOffset;
 	float curOffset;
 

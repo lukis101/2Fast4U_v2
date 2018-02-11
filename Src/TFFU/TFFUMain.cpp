@@ -14,6 +14,7 @@
 #include "TFFU/Params.h"
 #include "TFFU/Motor.h"
 #include "TFFU/Sensors.h"
+#include "TFFU/Compass.h"
 #include "TFFU/PID.h"
 
 
@@ -27,7 +28,7 @@ uint8_t raceActive = false;
 uint8_t standby = true;
 bool startFlag;
 bool stopFlag;
-
+int32_t totalpos;
 
 // INTERNALS
 const uint8_t NUMEVENTS = 5;
@@ -51,6 +52,7 @@ void JumpToBootloader();
 Motor motorL = Motor(TIM1, TIM3, 0, MOT1_DIR_GPIO_Port, MOT1_DIR_Pin);
 Motor motorR = Motor(TIM2, TIM3, 1, MOT2_DIR_GPIO_Port, MOT2_DIR_Pin);
 Sensors sensors = Sensors();
+Compass compass = Compass();
 PID PID_Angle(&AllParams.PID_Angle);
 
 void TFFUMain(void)
@@ -69,6 +71,7 @@ void TFFUMain(void)
 	SetDriveMode((uint8_t)DRIVEMODE_STOP);
 
 	sensors.Start();
+	compass.Start();
 
 	/* Main loop */
 	while(1)
@@ -86,6 +89,7 @@ void TFFUMain(void)
 			sensors.Update();
 			motorL.Update();
 			motorR.Update();
+			totalpos = (motorL.encPos+motorR.encPos)/2;
 
             //PID_Update( sensors.curOffset );
 
@@ -99,8 +103,8 @@ void TFFUMain(void)
 			switch (AllParams.DriveMode)
 			{
 			case DRIVEMODE_STOP:
-				//if (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET)
-				//	AllParams.RaceMode = RACEMODE_MANUAL;
+				if (HAL_GPIO_ReadPin(BTN1_GPIO_Port, BTN1_Pin) == GPIO_PIN_RESET)
+					SetDriveMode(DRIVEMODE_SIMPLE);
 				//if (HAL_GPIO_ReadPin(BTN2_GPIO_Port, BTN2_Pin) == GPIO_PIN_RESET)
 				//	AllParams.RaceMode = RACEMODE_SIMPLE;
 				//SetPin(LED_F_GPIO_Port, LED_F_Pin); // Red ON
@@ -108,16 +112,18 @@ void TFFUMain(void)
 			case DRIVEMODE_MANUAL:
 				drivethrottle = AllParams.ManualThrottle/255.0*MOT_PWM_MAX;
 				driveangle = (AllParams.ManualAngle/128.f)*drivethrottle;
-			    speed_l = -driveangle+drivethrottle;
-			    speed_r = driveangle+drivethrottle;
+			    speed_l = driveangle+drivethrottle;
+			    speed_r = -driveangle+drivethrottle;
 
 				motorL.SetSpeed((int32_t)speed_l);
 				motorR.SetSpeed((int32_t)speed_r);
 				break;
 			case DRIVEMODE_SIMPLE:
+				//if (HAL_GPIO_ReadPin(BTN2_GPIO_Port, BTN2_Pin) == GPIO_PIN_RESET)
+					//SetDriveMode(DRIVEMODE_STOP);
 				float pidang = -PID_Angle.Update(sensors.curOffset);
 				drivethrottle = (float)AllParams.Speed;
-				driveangle = pidang*drivethrottle;
+				driveangle = pidang*(MOT_PWM_MAX);
 			    speed_l = -driveangle+drivethrottle;
 			    speed_r = driveangle+drivethrottle;
 
@@ -134,13 +140,21 @@ void TFFUMain(void)
 				{
 					SetPin(LED_F_GPIO_Port, LED_F_Pin); // Green ON
 
-					SendMonVar(MONVAR_OFFSET, VARTYPE_FLOAT, &sensors.curOffset);
-					SendMonVar(MONVAR_SENSORS, VARTYPE_UWORD, &sensors.thresholds);
+					//SendMonVar(MONVAR_OFFSET, VARTYPE_FLOAT, &sensors.curOffset);
+					SendMonVar(MONVAR_OFFSET, VARTYPE_FLOAT, &sensors.values[6]);
+					SendMonVar(MONVAR_SENSORS, VARTYPE_UWORD, &(sensors.thresholds));
 					SendMonVar(MONVAR_1, VARTYPE_FLOAT, &PID_Angle.values.p);
-					SendMonVar(MONVAR_2, VARTYPE_FLOAT, &PID_Angle.values.i);
+					//SendMonVar(MONVAR_2, VARTYPE_FLOAT, &PID_Angle.unstability);
 					SendMonVar(MONVAR_3, VARTYPE_FLOAT, &PID_Angle.values.d);
 					//SendMonVar(MONVAR_2, VARTYPE_SDWORD, &motorL.realSpeed);
 					//SendMonVar(MONVAR_3, VARTYPE_SDWORD, &motorR.realSpeed);
+					//SendMonVar(MONVAR_3, VARTYPE_FLOAT, &sensa);
+
+					//SendMonVar(MONVAR_2, VARTYPE_DWORD, &totalpos);
+					//while (HAL_I2C_IsDeviceReady(&hi2c1, (uint16_t)(MPU9250_ADDRESS), 3, 100) != HAL_OK) {}
+					//PrintVarHex(VARTYPE_UDWORD, &totalpos);
+					//HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)(SENSORS_ADDR1), writecmd, 2, 500); // Enable
+					//HAL_I2C_Master_Transmit(&hi2c1, (uint16_t)(SENSORS_ADDR1), &targetreg, 1, 100); // Select raw values
 
 					nextTick_monitor = systicks + AllParams.MonitoringInterval;
 					ClearPin(LED_F_GPIO_Port, LED_F_Pin); // Green OFF
@@ -154,7 +168,7 @@ void SetDriveMode(uint8_t newMode)
 	switch (newMode)
 	{
 	case DRIVEMODE_STOP:
-		//HAL_GPIO_WritePin(Vmot_EN_GPIO_Port, Vmot_EN_Pin, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(Vmot_EN_GPIO_Port, Vmot_EN_Pin, GPIO_PIN_RESET);
 		motorL.SetSpeed(0);
 		motorR.SetSpeed(0);
 		motorL.Disable(&htim1, &htim3);
@@ -165,7 +179,7 @@ void SetDriveMode(uint8_t newMode)
 		motorR.Enable(&htim2, &htim3);
 		motorL.SetSpeed(0);
 		motorR.SetSpeed(0);
-		//HAL_GPIO_WritePin(Vmot_EN_GPIO_Port, Vmot_EN_Pin, GPIO_PIN_SET);
+		HAL_GPIO_WritePin(Vmot_EN_GPIO_Port, Vmot_EN_Pin, GPIO_PIN_RESET);
 		break;
 	case DRIVEMODE_SIMPLE:
 	    PID_Angle.Init();

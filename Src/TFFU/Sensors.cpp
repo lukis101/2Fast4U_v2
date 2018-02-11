@@ -77,13 +77,19 @@ void Sensors::UpdateOffset(void)
 	for( uint8_t i=0; i<14; i++ )
 	{
 		uint16_t invValue = SENSORS_MAXVALUE - rawValueBuff[i];
-		float absval = 0;
-		if( invValue > AllParams.SensThreshold )
+		rawValues[i] = invValue;///SENSORS_MAXVALUE;
+		if (invValue > AllParams.SensMax)
+			invValue = AllParams.SensMax;
+		if (invValue < AllParams.SensMin)
+			invValue = AllParams.SensMin;
+		float absval = (float)(invValue-AllParams.SensMin)/(AllParams.SensMax-AllParams.SensMin);
+		values[i] = absval;
+		//float absval = 0;
+		if( absval > 0.5)
 		{
 			thres |= (1<<i);
 			count++;
-			absval = 1;
-			//absval = ((float)invValue)/(SENSORS_MAXVALUE*0.8);
+			//absval = 1;
 		}
 		unwsum += absval;
 		wsum += absval * WEIGHTS[ i ];

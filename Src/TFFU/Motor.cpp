@@ -28,7 +28,7 @@ void Motor::Disable(TIM_HandleTypeDef* encHTimer, TIM_HandleTypeDef* pwmHTimer)
 }
 void Motor::Update()
 {
-	uint16_t newEncVal = encTim->CNT;
+	uint16_t newEncVal = -encTim->CNT;
 	int16_t encdelta = newEncVal-lastEncVal;
 	encPos += (int32_t)encdelta;
 	realSpeed = encdelta;
